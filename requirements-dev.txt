@@ -1,2 +1,10 @@
 -r requirements.txt
 pytest==9.1.1
+
+# Wave B security distributions (local paths relative to this file; run
+# `pip install -r requirements-dev.txt` from the repository root).  Installed
+# editable so the four packages resolve each other as dependencies.
+-e security/protocol
+-e security/ipc
+-e security/host
+-e security/client

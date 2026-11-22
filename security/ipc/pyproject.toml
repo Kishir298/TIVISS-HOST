@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tiviss-security-ipc"
+version = "0.1.0"
+description = "Unix-domain-socket transport for the T.I.V.I.S.S. security PDP."
+requires-python = ">=3.10"
+dependencies = ["tiviss-security-protocol>=0.1.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.setuptools]
+packages = ["tiviss_security_ipc"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]

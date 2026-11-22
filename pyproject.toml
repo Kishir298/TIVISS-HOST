@@ -31,7 +31,7 @@ include = ["tiviss*", "tiviss.*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "security/protocol", "security/ipc", "security/host", "security/client"]
 addopts = "-ra"
 
 [tool.ruff]

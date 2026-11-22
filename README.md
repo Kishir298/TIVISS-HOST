@@ -27,7 +27,10 @@ of R.I.S.A.R.M.S. T.I.V.I.S.S. is **not** A.S.I.S.:
 | Piece | Repository |
 | --- | --- |
 | Host runtime: identity, memory, permissions, ownership, handover, CLI | `Kishir298/TIVISS-HOST` (this repository) |
-| Security protocol (`tiviss-security-protocol`): framing, capability tokens, PDP schema | `Kishir298/TIVISS-HOST` → `security/protocol/` (implemented, v0.1.0) |
+| Security protocol (`tiviss-security-protocol`): framing, capability tokens, PDP schema | `Kishir298/TIVISS-HOST` → `security/protocol/` (v0.1.0) |
+| UDS transport (`tiviss-security-ipc`): socket path resolution, listener hardening, channels | `Kishir298/TIVISS-HOST` → `security/ipc/` (v0.1.0) |
+| PDP daemon (`tiviss-security-host`): fail-closed policy engine + local server + CLI | `Kishir298/TIVISS-HOST` → `security/host/` (v0.1.0) |
+| PDP client (`tiviss-security-client`): decide/health/version over the UDS socket | `Kishir298/TIVISS-HOST` → `security/client/` (v0.1.0) |
 | Client library for RISARMS-ui and CORE-CLIENT (scaffold) | `Kishir298/TIVISS-CLIENT` |
 
 This repository is the **host side**. The client library in
@@ -35,9 +38,32 @@ This repository is the **host side**. The client library in
 never imports `tiviss` internals directly. The security-protocol package is
 published from this repository (`security/protocol/`, stdlib-only, Python ≥
 3.10), with its device-side client in `Kishir298/TIVISS-CLIENT` (which pins
-the protocol version). The local PDP daemon (`tiviss-security-host`) and UDS
-transport (`tiviss-security-ipc`) are later waves — see RISARMS-DOCS. Ownership
-and scope are recorded in RISARMS-DOCS.
+the protocol version). The UDS transport, PDP daemon and PDP client are also
+published from this repository (`security/{ipc,host,client}/`). Ownership and
+scope are recorded in RISARMS-DOCS.
+
+## Security PDP (runtime model C: library + local daemon)
+
+`security.mode` in the T.I.V.I.S.S. configuration selects how policy
+decisions are made (see `tiviss.security.create_pdp`):
+
+- `embedded` (default) — the policy engine runs in-process, driven by the
+  `permissions.allow` / `permissions.deny` lists. Default **deny**;
+  an explicit deny always wins.
+- `daemon` — decisions are forwarded to the local PDP daemon over a Unix
+  domain socket (default `/run/tiviss/security.sock`; override with
+  `TIVISS_SECURITY_SOCKET` or `security.socket_path`). An unreachable
+  daemon raises `SecurityUnavailableError`, and `PDP.allowed()` fails closed
+  to `False`.
+
+Run the daemon standalone:
+
+```text
+pip install -r requirements-dev.txt
+tiviss-security-pdp --socket /run/tiviss/security.sock --allow 'memory.*'
+# or without installing the console script:
+python -m tiviss_security_host --allow 'memory.*' --deny 'memory.secret'
+```
 
 ## Relationship with C.O.R.E.
 
@@ -159,12 +185,14 @@ python -m venv .venv
 .venv\Scripts\python -m pytest
 ```
 
-The security-protocol package keeps its own suite (also offline/deterministic,
+The security packages keep their own suites (also offline/deterministic,
 Python ≥ 3.10):
 
 ```text
-cd security/protocol
-python -m pytest -q
+cd security/protocol && python -m pytest -q   # wire contract
+cd security/ipc      && python -m pytest -q   # UDS transport
+cd security/host     && python -m pytest -q   # PDP engine + daemon
+cd security/client   && python -m pytest -q   # PDP client
 ```
 
 ## Usage

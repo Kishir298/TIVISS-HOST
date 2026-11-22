@@ -137,6 +137,15 @@ class PermissionSettings:
 
 
 @dataclass
+class SecuritySettings:
+    """Security-facade mode (runtime model C: library + local PDP daemon)."""
+
+    mode: str = "embedded"  # "embedded" | "daemon"
+    socket_path: str = ""  # empty -> tiviss-security-ipc resolution order
+    request_timeout_s: float = 5.0
+
+
+@dataclass
 class RuntimeSettings:
     enabled: bool = True
 
@@ -163,6 +172,7 @@ class TIVISSConfig:
     model: ModelSettings = field(default_factory=ModelSettings)
     memory: MemorySettings = field(default_factory=MemorySettings)
     permissions: PermissionSettings = field(default_factory=PermissionSettings)
+    security: SecuritySettings = field(default_factory=SecuritySettings)
     runtime: RuntimeSettings = field(default_factory=RuntimeSettings)
     core: CoreSettings = field(default_factory=CoreSettings)
     rescs: RescsSettings = field(default_factory=RescsSettings)
@@ -212,6 +222,16 @@ class TIVISSConfig:
         for permission in [*self.permissions.allow, *self.permissions.deny]:
             if not self._valid_permission(permission):
                 errors.append(f"permission is malformed: {permission!r}")
+
+        if self.security.mode not in {"embedded", "daemon"}:
+            errors.append(
+                "security.mode must be one of 'embedded', 'daemon'; got "
+                f"{self.security.mode!r}"
+            )
+        if not isinstance(self.security.socket_path, str):
+            errors.append("security.socket_path must be a string")
+        if self.security.request_timeout_s <= 0:
+            errors.append("security.request_timeout_s must be > 0")
 
         # Validate dual SQLite paths
         if self.memory.backend == "sqlite":
@@ -409,6 +429,16 @@ class TIVISSConfig:
             allow=[str(p) for p in (permissions.get("allow") or [])],
             deny=[str(p) for p in (permissions.get("deny") or [])],
         )
+        security = data.get("security") or {}
+        config.security = SecuritySettings(
+            mode=str(security.get("mode", config.security.mode)).strip().lower(),
+            socket_path=str(security.get("socket_path") or ""),
+            request_timeout_s=cls._to_float(
+                security.get("request_timeout_s"),
+                config.security.request_timeout_s,
+                "security.request_timeout_s",
+            ),
+        )
         config.runtime = RuntimeSettings(
             enabled=cls._to_bool(runtime.get("enabled"), config.runtime.enabled)
         )
@@ -531,6 +561,16 @@ class TIVISSConfig:
             config.permissions.allow = _to_list(raw_allow)
         if raw_deny := _get("TIVISS_PERMISSION_DENY"):
             config.permissions.deny = _to_list(raw_deny)
+        if raw_mode := _get("TIVISS_SECURITY_MODE"):
+            config.security.mode = raw_mode.strip().lower()
+        if sock := _get("TIVISS_SECURITY_SOCKET"):
+            config.security.socket_path = sock.strip()
+        if raw_timeout := _get("TIVISS_SECURITY_TIMEOUT"):
+            config.security.request_timeout_s = cls._to_float(
+                raw_timeout,
+                config.security.request_timeout_s,
+                "security.request_timeout_s",
+            )
         if raw_runtime := _get("TIVISS_RUNTIME_ENABLED"):
             config.runtime.enabled = raw_runtime.strip().lower() in {
                 "1",

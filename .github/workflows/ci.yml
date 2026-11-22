@@ -33,3 +33,12 @@ jobs:
       - name: Run security protocol tests
         run: |
           cd security/protocol && python -m pytest -q --tb=no
+      - name: Run security ipc tests
+        run: |
+          cd security/ipc && python -m pytest -q --tb=no
+      - name: Run security host tests
+        run: |
+          cd security/host && python -m pytest -q --tb=no
+      - name: Run security client tests
+        run: |
+          cd security/client && python -m pytest -q --tb=no
