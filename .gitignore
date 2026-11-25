@@ -79,6 +79,10 @@ id_ed25519.*
 # Signing keys, release credentials and local secret stores
 .secrets/
 secrets/
+
+# Local-only config / runtime data
+config/*.lan.yaml
+var/
 *.ed25519
 *.priv
 private-key*
